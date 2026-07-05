@@ -1,0 +1,6 @@
+{
+  "name": "College Workflow Portal",
+  "description": "A college portal with role-based dashboards for event approvals and multi-user complaint resolution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

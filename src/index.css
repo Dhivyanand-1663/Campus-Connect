@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-bg: #111113;
+  --color-brand-ink: #E4E4E4;
+  --color-brand-accent: #5D5FEF;
+}
+
+body {
+  background-color: #111113;
+  color: #E4E4E4;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+/* Custom selection matching design spec */
+::selection {
+  background-color: #5D5FEF;
+  color: #111113;
+}
+
+/* Scrollbars matching dark tech theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background-color: #111113;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #1d1d21;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #5D5FEF;
+}
+
+/* Base utility styles matching design specification */
+.label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.6;
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #5D5FEF;
+  background: transparent;
+  color: #5D5FEF;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  transition: all 0.3s;
+}
+
+.btn:hover:not(:disabled) {
+  background: #5D5FEF;
+  color: #111113;
+}
+
+/* Standardizing general dashboard cards to match dark tech theme */
+#main-dashboard-container div[class*="bg-[#0d0d10]"],
+#main-dashboard-container div[class*="bg-white/"],
+#main-dashboard-container div[class*="bg-indigo-950"],
+#main-dashboard-container div[class*="bg-indigo-900"],
+#main-dashboard-container div[class*="bg-slate-900"],
+#main-dashboard-container div[class*="bg-rose-950"],
+#main-dashboard-container div[class*="bg-rose-900"],
+#main-dashboard-container div[class*="bg-emerald-950"],
+#main-dashboard-container div[class*="bg-amber-950"],
+#main-dashboard-container div[class*="bg-slate-950"],
+#main-dashboard-container div[class*="bg-slate-800"] {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #E4E4E4 !important;
+  box-shadow: none !important;
+}
+
+/* Ensure headings have Space Grotesk styling and white/slate ink color */
+#main-dashboard-container .text-white,
+#main-dashboard-container h1,
+#main-dashboard-container h2,
+#main-dashboard-container h3,
+#main-dashboard-container h4,
+#main-dashboard-container h5 {
+  color: #E4E4E4 !important;
+}
+
+#main-dashboard-container .text-slate-400,
+#main-dashboard-container .text-slate-300,
+#main-dashboard-container .text-slate-200,
+#main-dashboard-container .text-slate-500,
+#main-dashboard-container .text-indigo-200,
+#main-dashboard-container .text-rose-200,
+#main-dashboard-container .text-emerald-200,
+#main-dashboard-container .text-indigo-100,
+#main-dashboard-container .text-indigo-300 {
+  color: rgba(228, 228, 228, 0.7) !important;
+}
+
+/* Highlights for state or critical fields */
+#main-dashboard-container .text-indigo-400,
+#main-dashboard-container .text-rose-400 {
+  color: #5D5FEF !important;
+}
+
+#main-dashboard-container .text-emerald-400 {
+  color: #00ff66 !important;
+}
+
+#main-dashboard-container .text-amber-400 {
+  color: #FBBF24 !important;
+}
+
+/* Style inputs, select fields, and textareas */
+#main-dashboard-container input,
+#main-dashboard-container select,
+#main-dashboard-container textarea,
+#auth-container input,
+#auth-container select,
+#auth-container textarea {
+  background-color: #1a1a1c !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  border-radius: 4px !important;
+}
+
+#main-dashboard-container input:focus,
+#main-dashboard-container select:focus,
+#main-dashboard-container textarea:focus,
+#auth-container input:focus,
+#auth-container select:focus,
+#auth-container textarea:focus {
+  outline: none !important;
+  border-color: #5D5FEF !important;
+}
+
+/* Style Buttons to fit the dark tech theme */
+#main-dashboard-container button[class*="bg-indigo-600"],
+#main-dashboard-container button[class*="bg-indigo-500"],
+#main-dashboard-container button[class*="bg-rose-600"],
+#main-dashboard-container button[class*="bg-emerald-600"],
+#main-dashboard-container button[class*="bg-amber-600"],
+#main-dashboard-container button[class*="bg-emerald-500"],
+#main-dashboard-container button[class*="bg-rose-500"] {
+  background-color: #5D5FEF !important;
+  color: #111113 !important;
+  border: 1px solid #5D5FEF !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+#main-dashboard-container button[class*="bg-indigo-600"]:hover,
+#main-dashboard-container button[class*="bg-indigo-500"]:hover,
+#main-dashboard-container button[class*="bg-rose-600"]:hover,
+#main-dashboard-container button[class*="bg-emerald-600"]:hover,
+#main-dashboard-container button[class*="bg-amber-600"]:hover,
+#main-dashboard-container button[class*="bg-emerald-500"]:hover,
+#main-dashboard-container button[class*="bg-rose-500"]:hover {
+  background-color: transparent !important;
+  color: #5D5FEF !important;
+}
+
+/* Normalize list grids and dividers */
+#main-dashboard-container div,
+#main-dashboard-container section,
+#main-dashboard-container border,
+#main-dashboard-container hr {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Custom indicator state */
+.system-status-indicator {
+  width: 8px;
+  height: 8px;
+  background: #00ff66;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00ff66;
+}
+
+/* Modals & Overlay Style matching the selected theme */
+div[class*="fixed inset-0 z-50"] {
+  background-color: rgba(17, 17, 19, 0.85) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+div[class*="fixed inset-0 z-50"] div[class*="bg-"] {
+  background-color: #1a1a1c !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: #E4E4E4 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+div[class*="fixed inset-0 z-50"] h2,
+div[class*="fixed inset-0 z-50"] h3,
+div[class*="fixed inset-0 z-50"] h4,
+div[class*="fixed inset-0 z-50"] p,
+div[class*="fixed inset-0 z-50"] label,
+div[class*="fixed inset-0 z-50"] span {
+  color: #E4E4E4 !important;
+}
+
+div[class*="fixed inset-0 z-50"] button[class*="bg-"] {
+  background-color: #5D5FEF !important;
+  color: #111113 !important;
+  border: 1px solid #5D5FEF !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+}
+
+div[class*="fixed inset-0 z-50"] button[class*="bg-"]:hover {
+  background-color: transparent !important;
+  color: #5D5FEF !important;
+}
