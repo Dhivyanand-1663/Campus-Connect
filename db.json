@@ -1,0 +1,89 @@
+{
+  "users": [
+    {
+      "username": "admin@clg",
+      "passwordHash": "7676aaafb027c825bd9abab78b234070e702752f625b752e55e55b48e607e358",
+      "role": "Software Admin"
+    },
+    {
+      "username": "student",
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "Student",
+      "department": "Computer Science & Engineering",
+      "rollNumber": "22CSE045"
+    },
+    {
+      "username": "staff",
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "Dept Staff",
+      "department": "Computer Science & Engineering"
+    },
+    {
+      "username": "hod",
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "HOD",
+      "department": "Computer Science & Engineering"
+    },
+    {
+      "username": "dean",
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "Dean"
+    },
+    {
+      "username": "principal",
+      "passwordHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "Principal"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt-1",
+      "title": "National Hackathon 2026",
+      "description": "An all-India 24-hour student hackathon focusing on AI and Sustainability solutions.",
+      "venue": "Main Auditorium & CS Labs",
+      "date": "2026-08-15",
+      "status": "PENDING_DEPT_STAFF",
+      "created_by": "student",
+      "created_by_roll": "22CSE045",
+      "department": "Computer Science & Engineering",
+      "createdAt": "2026-07-05T03:50:26.983Z",
+      "activities": []
+    },
+    {
+      "id": "evt-2",
+      "title": "Industrial Visit to Google Office",
+      "description": "A career guidance industrial visit for final year engineering students.",
+      "venue": "Google Hyderabad Campus",
+      "date": "2026-09-10",
+      "status": "PENDING_DEAN",
+      "created_by": "student",
+      "created_by_roll": "22CSE045",
+      "department": "Computer Science & Engineering",
+      "createdAt": "2026-07-04T07:50:26.983Z",
+      "activities": [
+        {
+          "id": "act-1",
+          "actorName": "staff",
+          "actorRole": "Dept Staff",
+          "action": "APPROVE",
+          "remarks": "The syllabus aligns well with this industrial visit. Recommended.",
+          "timestamp": "2026-07-04T11:50:26.983Z"
+        }
+      ]
+    }
+  ],
+  "complaints": [
+    {
+      "id": "comp-1",
+      "title": "Slow WiFi Connection in Hostels",
+      "category": "Infrastructure",
+      "description": "The WiFi bandwidth is extremely low during peak hours (8:00 PM - 11:00 PM), making it impossible to access online study materials.",
+      "status": "OPEN",
+      "raised_by": "student",
+      "raised_by_roll": "22CSE045",
+      "department": "Computer Science & Engineering",
+      "createdAt": "2026-07-05T05:50:26.983Z",
+      "messages": []
+    }
+  ]
+}
