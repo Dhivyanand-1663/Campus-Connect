@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: campus-connect
+    env: node
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TOKEN_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false

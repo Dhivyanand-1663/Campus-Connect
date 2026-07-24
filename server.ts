@@ -10,8 +10,18 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const getDirname = () => {
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.url) {
+      return path.dirname(fileURLToPath(import.meta.url));
+    }
+  } catch {
+    // Fallback for CommonJS bundle environments
+  }
+  return typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+};
+
+const __dirname = getDirname();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
