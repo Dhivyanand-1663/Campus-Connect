@@ -52,12 +52,21 @@ interface AuditLog {
   message: string;
 }
 
+const CURRENT_BUILD_VERSION = 'v1.0.1_title_campus_connect';
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('college_portal_token'));
   const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'complaints' | 'logs'>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
-  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(true);
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(() => {
+    const lastSeen = localStorage.getItem('campus_connect_update_seen');
+    if (lastSeen !== CURRENT_BUILD_VERSION) {
+      localStorage.setItem('campus_connect_update_seen', CURRENT_BUILD_VERSION);
+      return true;
+    }
+    return false;
+  });
 
   // Core Data State
   const [events, setEvents] = useState<Event[]>([]);
