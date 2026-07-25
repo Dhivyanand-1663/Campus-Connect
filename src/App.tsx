@@ -52,7 +52,7 @@ interface AuditLog {
   message: string;
 }
 
-const CURRENT_BUILD_VERSION = 'v1.0.1_title_campus_connect';
+const CURRENT_BUILD_VERSION = 'v1.0.2_your_release_name';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
