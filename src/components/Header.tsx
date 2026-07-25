@@ -14,9 +14,10 @@ interface HeaderProps {
   onLoginSuccess: (user: User, token: string) => void;
   onRefreshData: () => void;
   onLogoClick?: () => void;
+  onOpenUpdateModal?: () => void;
 }
 
-export function Header({ user, onLogout, onLoginSuccess, onRefreshData, onLogoClick }: HeaderProps) {
+export function Header({ user, onLogout, onLoginSuccess, onRefreshData, onLogoClick, onOpenUpdateModal }: HeaderProps) {
   // Direct Quick Switch for demo ease
   const handleQuickSwitch = async (roleUsername: string) => {
     try {
@@ -57,8 +58,11 @@ export function Header({ user, onLogout, onLoginSuccess, onRefreshData, onLogoCl
               <Layers size={18} className="text-[#5D5FEF]" />
             </div>
             <div>
-              <h1 className="text-sm font-bold tracking-tight text-[#E4E4E4] uppercase font-mono group-hover:text-[#5D5FEF] transition-colors">
-                CAMPUS_FLOW
+              <h1 className="text-sm font-bold tracking-tight text-[#E4E4E4] uppercase font-mono group-hover:text-[#5D5FEF] transition-colors flex items-center gap-2">
+                <span>CAMPUS_FLOW</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-5 border border-emerald-500/30 text-emerald-400 font-normal">
+                  Campus-connect
+                </span>
               </h1>
               <p className="text-[10px] text-white/50 font-mono tracking-wider hidden sm:block uppercase">
                 Institutional Workflow Portal
@@ -69,6 +73,16 @@ export function Header({ user, onLogout, onLoginSuccess, onRefreshData, onLogoCl
           {/* Right Session Details */}
           {user ? (
             <div className="flex items-center gap-4">
+              {onOpenUpdateModal && (
+                <button
+                  onClick={onOpenUpdateModal}
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-md text-xs font-mono transition-all cursor-pointer"
+                  title="Watch Git Push Deployment Animation"
+                >
+                  <RefreshCw size={12} className="animate-spin-slow" />
+                  <span>Git Update Screen</span>
+                </button>
+              )}
               <div className="hidden md:flex flex-col items-end text-right">
                 <span className="text-sm font-bold text-[#E4E4E4]">{user.username}</span>
                 {user.department ? (
@@ -95,6 +109,16 @@ export function Header({ user, onLogout, onLoginSuccess, onRefreshData, onLogoCl
             </div>
           ) : (
             <div className="flex items-center gap-3">
+              {onOpenUpdateModal && (
+                <button
+                  onClick={onOpenUpdateModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5D5FEF]/15 hover:bg-[#5D5FEF]/30 text-white border border-[#5D5FEF]/50 rounded-md text-xs font-mono font-bold transition-all cursor-pointer shadow-[0_0_10px_rgba(93,95,239,0.3)]"
+                  title="Watch Git Push Deployment Animation"
+                >
+                  <RefreshCw size={12} className="text-cyan-400 animate-spin-slow" />
+                  <span>Git Update Screen</span>
+                </button>
+              )}
               <button
                 id="btn-quick-reset"
                 onClick={handleReset}

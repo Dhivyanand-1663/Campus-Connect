@@ -22,6 +22,7 @@ import { EventPipelinePage } from './components/EventPipelinePage';
 import { GrievanceHubPage } from './components/GrievanceHubPage';
 import { SecurityLogsPage } from './components/SecurityLogsPage';
 import { AdminPrivilegeDashboard } from './components/AdminPrivilegeDashboard';
+import { SystemUpdateAnimation } from './components/SystemUpdateAnimation';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -56,6 +57,7 @@ export default function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('college_portal_token'));
   const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'complaints' | 'logs'>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(true);
 
   // Core Data State
   const [events, setEvents] = useState<Event[]>([]);
@@ -385,6 +387,7 @@ export default function App() {
         onLoginSuccess={handleLoginSuccess}
         onRefreshData={fetchData}
         onLogoClick={() => setActiveTab('dashboard')}
+        onOpenUpdateModal={() => setShowUpdateModal(true)}
       />
 
       {/* Auth Screen or Main Cockpit */}
@@ -1033,6 +1036,12 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Git Update Animation Screen Overlay */}
+      <SystemUpdateAnimation
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+      />
 
       {/* Persistent Institutional Status Footer */}
       <footer className="h-10 bg-indigo-950/40 border-t border-white/5 px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[10px] font-mono text-slate-500 mt-auto z-10">
