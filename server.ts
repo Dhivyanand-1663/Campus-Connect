@@ -5,10 +5,13 @@
 
 import express from 'express';
 import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import { pool, initPostgresDb } from './db';
+
+dotenv.config();
 
 const getDirname = () => {
   try {
@@ -26,78 +29,11 @@ const __dirname = getDirname();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
-const DB_FILE = path.join(process.cwd(), 'db.json');
 
 app.use(express.json());
 
 // HMAC secret for stateless JWT-like token signing
 const TOKEN_SECRET = process.env.TOKEN_SECRET || 'college-portal-super-secret-key-2026';
-
-// Interfaces for our simple database
-interface UserDb {
-  username: string;
-  passwordHash: string;
-  role: string;
-  department?: string;
-  rollNumber?: string;
-}
-
-interface EventActivity {
-  id: string;
-  actorName: string;
-  actorRole: string;
-  action: 'APPROVE' | 'REJECT';
-  remarks?: string;
-  timestamp: string;
-}
-
-interface EventDb {
-  id: string;
-  title: string;
-  description: string;
-  venue: string;
-  date: string;
-  status: 'PENDING_DEPT_STAFF' | 'PENDING_DEAN' | 'PENDING_PRINCIPAL' | 'APPROVED' | 'REJECTED';
-  created_by: string;
-  created_by_roll?: string;
-  department: string;
-  createdAt: string;
-  activities: EventActivity[];
-}
-
-interface ComplaintMessage {
-  id: string;
-  senderName: string;
-  senderRole: string;
-  message: string;
-  timestamp: string;
-}
-
-interface ComplaintDb {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED';
-  raised_by: string;
-  raised_by_roll?: string;
-  department: string;
-  createdAt: string;
-  messages: ComplaintMessage[];
-}
-
-interface DatabaseSchema {
-  users: UserDb[];
-  events: EventDb[];
-  complaints: ComplaintDb[];
-}
-
-// In-memory cache + file sync helper
-let db: DatabaseSchema = {
-  users: [],
-  events: [],
-  complaints: []
-};
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -130,148 +66,11 @@ function verifyToken(token: string): { username: string; role: string; departmen
   }
 }
 
-// Load database or initialize with pre-seeded data
-function loadDb() {
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const content = fs.readFileSync(DB_FILE, 'utf8');
-      db = JSON.parse(content);
-      // Fallbacks
-      if (!db.users) db.users = [];
-      if (!db.events) db.events = [];
-      if (!db.complaints) db.complaints = [];
-      
-      // Inject admin@clg if not exists
-      const hasAdmin = db.users.some(u => u.username.toLowerCase() === 'admin@clg');
-      if (!hasAdmin) {
-        db.users.push({
-          username: 'admin@clg',
-          passwordHash: hashPassword('admin@123'),
-          role: 'Software Admin'
-        });
-        saveDb();
-      }
-      
-      console.log(`Loaded ${db.users.length} users, ${db.events.length} events, and ${db.complaints.length} complaints.`);
-    } else {
-      initializeWithSeeds();
-    }
-  } catch (err) {
-    console.error('Error loading database, reinitializing...', err);
-    initializeWithSeeds();
-  }
-}
-
-function saveDb() {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Failed to save database to file:', err);
-  }
-}
-
-function initializeWithSeeds() {
-  const defaultPasswordHash = hashPassword('password');
-  const adminPasswordHash = hashPassword('admin@123');
-  
-  db = {
-    users: [
-      {
-        username: 'admin@clg',
-        passwordHash: adminPasswordHash,
-        role: 'Software Admin'
-      },
-      {
-        username: 'student',
-        passwordHash: defaultPasswordHash,
-        role: 'Student',
-        department: 'Computer Science & Engineering',
-        rollNumber: '22CSE045'
-      },
-      {
-        username: 'staff',
-        passwordHash: defaultPasswordHash,
-        role: 'Dept Staff',
-        department: 'Computer Science & Engineering'
-      },
-      {
-        username: 'hod',
-        passwordHash: defaultPasswordHash,
-        role: 'HOD',
-        department: 'Computer Science & Engineering'
-      },
-      {
-        username: 'dean',
-        passwordHash: defaultPasswordHash,
-        role: 'Dean'
-      },
-      {
-        username: 'principal',
-        passwordHash: defaultPasswordHash,
-        role: 'Principal'
-      }
-    ],
-    events: [
-      {
-        id: 'evt-1',
-        title: 'National Hackathon 2026',
-        description: 'An all-India 24-hour student hackathon focusing on AI and Sustainability solutions.',
-        venue: 'Main Auditorium & CS Labs',
-        date: '2026-08-15',
-        status: 'PENDING_DEPT_STAFF',
-        created_by: 'student',
-        created_by_roll: '22CSE045',
-        department: 'Computer Science & Engineering',
-        createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-        activities: []
-      },
-      {
-        id: 'evt-2',
-        title: 'Industrial Visit to Google Office',
-        description: 'A career guidance industrial visit for final year engineering students.',
-        venue: 'Google Hyderabad Campus',
-        date: '2026-09-10',
-        status: 'PENDING_DEAN',
-        created_by: 'student',
-        created_by_roll: '22CSE045',
-        department: 'Computer Science & Engineering',
-        createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-        activities: [
-          {
-            id: 'act-1',
-            actorName: 'staff',
-            actorRole: 'Dept Staff',
-            action: 'APPROVE',
-            remarks: 'The syllabus aligns well with this industrial visit. Recommended.',
-            timestamp: new Date(Date.now() - 3600000 * 20).toISOString()
-          }
-        ]
-      }
-    ],
-    complaints: [
-      {
-        id: 'comp-1',
-        title: 'Slow WiFi Connection in Hostels',
-        category: 'Infrastructure',
-        description: 'The WiFi bandwidth is extremely low during peak hours (8:00 PM - 11:00 PM), making it impossible to access online study materials.',
-        status: 'OPEN',
-        raised_by: 'student',
-        raised_by_roll: '22CSE045',
-        department: 'Computer Science & Engineering',
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        messages: []
-      }
-    ]
-  };
-  saveDb();
-  console.log('Database initialized with pre-seeded data.');
-}
-
-// Load initial database
-loadDb();
+// Initialize PostgreSQL tables & seed data
+initPostgresDb();
 
 // Request Auth Middleware
-function authenticate(req: any, res: any, next: any) {
+async function authenticate(req: any, res: any, next: any) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized. No session token provided.' });
@@ -282,25 +81,28 @@ function authenticate(req: any, res: any, next: any) {
     return res.status(401).json({ error: 'Session expired or invalid token.' });
   }
   
-  // Locate actual user in database just to be secure
-  const realUser = db.users.find(u => u.username === sessionUser.username);
-  if (!realUser) {
-    return res.status(401).json({ error: 'User no longer exists.' });
+  try {
+    const userRes = await pool.query(
+      'SELECT username, role, department, roll_number as "rollNumber" FROM users WHERE LOWER(username) = LOWER($1)',
+      [sessionUser.username]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(401).json({ error: 'User no longer exists.' });
+    }
+
+    req.user = userRes.rows[0];
+    next();
+  } catch (err) {
+    console.error('Auth verification error:', err);
+    return res.status(500).json({ error: 'Authentication internal error.' });
   }
-  
-  req.user = {
-    username: realUser.username,
-    role: realUser.role,
-    department: realUser.department,
-    rollNumber: realUser.rollNumber
-  };
-  next();
 }
 
 // API Routes
 
 // Registration & Login
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { username, password, role, department, rollNumber } = req.body;
   
   if (!username || !password || !role) {
@@ -309,76 +111,81 @@ app.post('/api/register', (req, res) => {
 
   const normalizedUsername = username.trim();
   
-  // Mandatory department check for Student, Dept Staff, HOD (Algorithm 1, step 3)
   if (['Student', 'Dept Staff', 'HOD'].includes(role)) {
     if (!department) {
       return res.status(400).json({ error: 'Department selection is mandatory for this role.' });
     }
   }
 
-  // Roll number is mandatory for students
   if (role === 'Student' && !rollNumber) {
     return res.status(400).json({ error: 'Roll number is mandatory for students.' });
   }
 
-  // Check username uniqueness
-  const exists = db.users.some(u => u.username.toLowerCase() === normalizedUsername.toLowerCase());
-  if (exists) {
-    return res.status(400).json({ error: 'Username is already taken.' });
+  try {
+    const existing = await pool.query('SELECT username FROM users WHERE LOWER(username) = LOWER($1)', [normalizedUsername]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Username is already taken.' });
+    }
+
+    const passwordHash = hashPassword(password);
+    const deptVal = ['Student', 'Dept Staff', 'HOD'].includes(role) ? department : null;
+    const rollVal = role === 'Student' ? rollNumber.trim() : null;
+
+    await pool.query(
+      'INSERT INTO users (username, password_hash, role, department, roll_number) VALUES ($1, $2, $3, $4, $5)',
+      [normalizedUsername, passwordHash, role, deptVal, rollVal]
+    );
+
+    const newUser = {
+      username: normalizedUsername,
+      role,
+      department: deptVal || undefined,
+      rollNumber: rollVal || undefined
+    };
+
+    const token = generateToken(newUser);
+    res.status(201).json({ user: newUser, token });
+  } catch (err) {
+    console.error('Registration Error:', err);
+    res.status(500).json({ error: 'Database registration error.' });
   }
-
-  // Hash password & save user record
-  const passwordHash = hashPassword(password);
-  const newUser: UserDb = {
-    username: normalizedUsername,
-    passwordHash,
-    role,
-    department: ['Student', 'Dept Staff', 'HOD'].includes(role) ? department : undefined,
-    rollNumber: role === 'Student' ? rollNumber.trim() : undefined
-  };
-
-  db.users.push(newUser);
-  saveDb();
-
-  // Create session token & auto-login
-  const token = generateToken(newUser);
-  res.status(201).json({
-    user: {
-      username: newUser.username,
-      role: newUser.role,
-      department: newUser.department,
-      rollNumber: newUser.rollNumber
-    },
-    token
-  });
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required.' });
   }
 
-  const user = db.users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid credentials. User does not exist.' });
-  }
+  try {
+    const userRes = await pool.query(
+      'SELECT username, password_hash as "passwordHash", role, department, roll_number as "rollNumber" FROM users WHERE LOWER(username) = LOWER($1)',
+      [username.trim()]
+    );
 
-  const expectedHash = hashPassword(password);
-  if (user.passwordHash !== expectedHash) {
-    return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
-  }
+    if (userRes.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials. User does not exist.' });
+    }
 
-  const token = generateToken(user);
-  res.json({
-    user: {
+    const user = userRes.rows[0];
+    const expectedHash = hashPassword(password);
+    if (user.passwordHash !== expectedHash) {
+      return res.status(401).json({ error: 'Invalid credentials. Incorrect password.' });
+    }
+
+    const userObj = {
       username: user.username,
       role: user.role,
-      department: user.department,
-      rollNumber: user.rollNumber
-    },
-    token
-  });
+      department: user.department || undefined,
+      rollNumber: user.rollNumber || undefined
+    };
+
+    const token = generateToken(userObj);
+    res.json({ user: userObj, token });
+  } catch (err) {
+    console.error('Login Error:', err);
+    res.status(500).json({ error: 'Database login error.' });
+  }
 });
 
 app.get('/api/me', authenticate, (req: any, res) => {
@@ -388,34 +195,52 @@ app.get('/api/me', authenticate, (req: any, res) => {
 // Event Operations
 
 // Get all events visible to user based on role
-app.get('/api/events', authenticate, (req: any, res) => {
-  const { role, department } = req.user;
+app.get('/api/events', authenticate, async (req: any, res) => {
+  const { username, role, department } = req.user;
   
-  // Filter events based on role
-  // Students see their own events
-  // Dept staff see events pending department staff approval in their department
-  // HOD sees events in their department
-  // Dean & Principal see college-wide events
-  let filteredEvents = db.events;
-  
-  if (role === 'Student') {
-    // Show student's own events
-    filteredEvents = db.events.filter(e => e.created_by === req.user.username);
-  } else if (role === 'Dept Staff') {
-    // Show events belonging to their department that require department staff attention,
-    // plus historical events in their department for reference
-    filteredEvents = db.events.filter(e => e.department === department);
-  } else if (role === 'HOD') {
-    // HOD sees all events within their department
-    filteredEvents = db.events.filter(e => e.department === department);
-  }
-  // Dean and Principal see all events (college-wide)
+  try {
+    let query = `
+      SELECT id, title, description, venue, date, status, 
+             created_by, created_by_roll, department, created_at as "createdAt"
+      FROM events
+    `;
+    const params: any[] = [];
 
-  res.json(filteredEvents);
+    if (role === 'Student') {
+      query += ' WHERE created_by = $1';
+      params.push(username);
+    } else if (role === 'Dept Staff' || role === 'HOD') {
+      query += ' WHERE department = $1';
+      params.push(department);
+    }
+    
+    query += ' ORDER BY created_at DESC';
+
+    const eventsRes = await pool.query(query, params);
+    const events = eventsRes.rows;
+
+    // Fetch activities for these events
+    for (const evt of events) {
+      const actRes = await pool.query(
+        `SELECT id, actor_name as "actorName", actor_role as "actorRole", 
+                action, remarks, timestamp 
+         FROM event_activities 
+         WHERE event_id = $1 
+         ORDER BY timestamp ASC`,
+        [evt.id]
+      );
+      evt.activities = actRes.rows;
+    }
+
+    res.json(events);
+  } catch (err) {
+    console.error('Fetch Events Error:', err);
+    res.status(500).json({ error: 'Database error fetching events.' });
+  }
 });
 
 // Create event (restricted to Students)
-app.post('/api/events', authenticate, (req: any, res) => {
+app.post('/api/events', authenticate, async (req: any, res) => {
   if (req.user.role !== 'Student') {
     return res.status(403).json({ error: 'Access denied. Only students can create event proposals.' });
   }
@@ -425,124 +250,165 @@ app.post('/api/events', authenticate, (req: any, res) => {
     return res.status(400).json({ error: 'Title, description, venue, and date are required.' });
   }
 
-  const newEvent: EventDb = {
-    id: 'evt-' + Math.random().toString(36).substring(2, 9),
-    title,
-    description,
-    venue,
-    date,
-    status: 'PENDING_DEPT_STAFF',
-    created_by: req.user.username,
-    created_by_roll: req.user.rollNumber,
-    department: req.user.department!,
-    createdAt: new Date().toISOString(),
-    activities: []
-  };
+  const eventId = 'evt-' + Math.random().toString(36).substring(2, 9);
+  const now = new Date().toISOString();
 
-  db.events.push(newEvent);
-  saveDb();
-  res.status(201).json(newEvent);
+  try {
+    await pool.query(
+      `INSERT INTO events (id, title, description, venue, date, status, created_by, created_by_roll, department, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [eventId, title, description, venue, date, 'PENDING_DEPT_STAFF', req.user.username, req.user.rollNumber || null, req.user.department, now]
+    );
+
+    const newEvent = {
+      id: eventId,
+      title,
+      description,
+      venue,
+      date,
+      status: 'PENDING_DEPT_STAFF',
+      created_by: req.user.username,
+      created_by_roll: req.user.rollNumber,
+      department: req.user.department,
+      createdAt: now,
+      activities: []
+    };
+
+    res.status(201).json(newEvent);
+  } catch (err) {
+    console.error('Create Event Error:', err);
+    res.status(500).json({ error: 'Failed to create event in database.' });
+  }
 });
 
 // Perform approval actions with multi-level checks
-app.post('/api/events/:id/action', authenticate, (req: any, res) => {
+app.post('/api/events/:id/action', authenticate, async (req: any, res) => {
   const { id } = req.params;
-  const { action, remarks } = req.body; // action: 'APPROVE' | 'REJECT'
+  const { action, remarks } = req.body;
   
   if (!action || !['APPROVE', 'REJECT'].includes(action)) {
     return res.status(400).json({ error: 'Action must be either APPROVE or REJECT.' });
   }
 
-  const eventIndex = db.events.findIndex(e => e.id === id);
-  if (eventIndex === -1) {
-    return res.status(404).json({ error: 'Event not found.' });
-  }
-
-  const event = db.events[eventIndex];
-  const user = req.user;
-
-  // Let's implement Algorithm 2, Step 9 (Access-control check):
-  // "actor's role must match the role required at the event's current status, and
-  // — only for the Dept Staff stage — actor's department must equal the event's department. Fails -> 403 Forbidden"
-  
-  let allowed = false;
-  let nextStatus: 'PENDING_DEPT_STAFF' | 'PENDING_DEAN' | 'PENDING_PRINCIPAL' | 'APPROVED' | 'REJECTED' = event.status;
-
-  if (event.status === 'PENDING_DEPT_STAFF') {
-    if (user.role === 'Dept Staff' && user.department === event.department) {
-      allowed = true;
-      nextStatus = action === 'APPROVE' ? 'PENDING_DEAN' : 'REJECTED';
+  try {
+    const eventRes = await pool.query('SELECT * FROM events WHERE id = $1', [id]);
+    if (eventRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found.' });
     }
-  } else if (event.status === 'PENDING_DEAN') {
-    if (user.role === 'Dean') {
-      allowed = true;
-      nextStatus = action === 'APPROVE' ? 'PENDING_PRINCIPAL' : 'REJECTED';
+
+    const event = eventRes.rows[0];
+    const user = req.user;
+
+    let allowed = false;
+    let nextStatus = event.status;
+
+    if (event.status === 'PENDING_DEPT_STAFF') {
+      if (user.role === 'Dept Staff' && user.department === event.department) {
+        allowed = true;
+        nextStatus = action === 'APPROVE' ? 'PENDING_DEAN' : 'REJECTED';
+      }
+    } else if (event.status === 'PENDING_DEAN') {
+      if (user.role === 'Dean') {
+        allowed = true;
+        nextStatus = action === 'APPROVE' ? 'PENDING_PRINCIPAL' : 'REJECTED';
+      }
+    } else if (event.status === 'PENDING_PRINCIPAL') {
+      if (user.role === 'Principal') {
+        allowed = true;
+        nextStatus = action === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+      }
     }
-  } else if (event.status === 'PENDING_PRINCIPAL') {
-    if (user.role === 'Principal') {
-      allowed = true;
-      nextStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+
+    if (!allowed) {
+      return res.status(403).json({ error: 'Access denied. You do not have permission to act on this event at its current stage.' });
     }
+
+    const actId = 'act-' + Math.random().toString(36).substring(2, 9);
+    const now = new Date().toISOString();
+
+    await pool.query(
+      `INSERT INTO event_activities (id, event_id, actor_name, actor_role, action, remarks, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [actId, id, user.username, user.role, action, remarks || null, now]
+    );
+
+    await pool.query('UPDATE events SET status = $1 WHERE id = $2', [nextStatus, id]);
+
+    // Fetch updated event with all activities
+    const updatedEvtRes = await pool.query(
+      `SELECT id, title, description, venue, date, status, 
+              created_by, created_by_roll, department, created_at as "createdAt" 
+       FROM events WHERE id = $1`, 
+      [id]
+    );
+    const updatedEvt = updatedEvtRes.rows[0];
+
+    const actRes = await pool.query(
+      `SELECT id, actor_name as "actorName", actor_role as "actorRole", 
+              action, remarks, timestamp 
+       FROM event_activities 
+       WHERE event_id = $1 
+       ORDER BY timestamp ASC`,
+      [id]
+    );
+    updatedEvt.activities = actRes.rows;
+
+    res.json(updatedEvt);
+  } catch (err) {
+    console.error('Event Action Error:', err);
+    res.status(500).json({ error: 'Database action failure.' });
   }
-
-  if (!allowed) {
-    return res.status(403).json({ error: 'Access denied. You do not have permission to act on this event at its current stage.' });
-  }
-
-  // Create action activity log
-  const activity: EventActivity = {
-    id: 'act-' + Math.random().toString(36).substring(2, 9),
-    actorName: user.username,
-    actorRole: user.role,
-    action,
-    remarks: remarks || undefined,
-    timestamp: new Date().toISOString()
-  };
-
-  // Update Event
-  event.status = nextStatus;
-  event.activities.push(activity);
-  
-  db.events[eventIndex] = event;
-  saveDb();
-
-  res.json(event);
 });
 
 
 // Complaint Operations
 
 // Get all complaints visible to the user
-app.get('/api/complaints', authenticate, (req: any, res) => {
-  const { role, department } = req.user;
+app.get('/api/complaints', authenticate, async (req: any, res) => {
+  const { username, role, department } = req.user;
   
-  // Students see complaints they raised
-  // HOD sees complaints raised in their department (simultaneous routing)
-  // Dean sees all complaints college-wide (simultaneous routing)
-  // Principal and Dept Staff can see for general monitoring, let's allow it or restrict as appropriate.
-  // Standard dual routing: visible to student, department HOD, and Dean
-  let filteredComplaints = db.complaints;
+  try {
+    let query = `
+      SELECT id, title, category, description, status, 
+             raised_by, raised_by_roll, department, created_at as "createdAt"
+      FROM complaints
+    `;
+    const params: any[] = [];
 
-  if (role === 'Student') {
-    filteredComplaints = db.complaints.filter(c => c.raised_by === req.user.username);
-  } else if (role === 'HOD') {
-    filteredComplaints = db.complaints.filter(c => c.department === department);
-  } else if (role === 'Dean') {
-    // Dean sees all complaints college-wide
-    filteredComplaints = db.complaints;
-  } else if (role === 'Principal') {
-    // Let Principal see all too for portal overview
-    filteredComplaints = db.complaints;
-  } else {
-    // Dept Staff see complaints in their department
-    filteredComplaints = db.complaints.filter(c => c.department === department);
+    if (role === 'Student') {
+      query += ' WHERE raised_by = $1';
+      params.push(username);
+    } else if (role === 'HOD' || role === 'Dept Staff') {
+      query += ' WHERE department = $1';
+      params.push(department);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const complaintsRes = await pool.query(query, params);
+    const complaints = complaintsRes.rows;
+
+    for (const comp of complaints) {
+      const msgRes = await pool.query(
+        `SELECT id, sender_name as "senderName", sender_role as "senderRole", 
+                message, timestamp 
+         FROM complaint_messages 
+         WHERE complaint_id = $1 
+         ORDER BY timestamp ASC`,
+        [comp.id]
+      );
+      comp.messages = msgRes.rows;
+    }
+
+    res.json(complaints);
+  } catch (err) {
+    console.error('Fetch Complaints Error:', err);
+    res.status(500).json({ error: 'Database error fetching complaints.' });
   }
-
-  res.json(filteredComplaints);
 });
 
 // Raise complaint (restricted to Students)
-app.post('/api/complaints', authenticate, (req: any, res) => {
+app.post('/api/complaints', authenticate, async (req: any, res) => {
   if (req.user.role !== 'Student') {
     return res.status(403).json({ error: 'Access denied. Only students can submit complaints.' });
   }
@@ -552,144 +418,184 @@ app.post('/api/complaints', authenticate, (req: any, res) => {
     return res.status(400).json({ error: 'Title, category, and description are required.' });
   }
 
-  const newComplaint: ComplaintDb = {
-    id: 'comp-' + Math.random().toString(36).substring(2, 9),
-    title,
-    category,
-    description,
-    status: 'OPEN',
-    raised_by: req.user.username,
-    raised_by_roll: req.user.rollNumber,
-    department: req.user.department!,
-    createdAt: new Date().toISOString(),
-    messages: []
-  };
+  const complaintId = 'comp-' + Math.random().toString(36).substring(2, 9);
+  const now = new Date().toISOString();
 
-  db.complaints.push(newComplaint);
-  saveDb();
-  res.status(201).json(newComplaint);
+  try {
+    await pool.query(
+      `INSERT INTO complaints (id, title, category, description, status, raised_by, raised_by_roll, department, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [complaintId, title, category, description, 'OPEN', req.user.username, req.user.rollNumber || null, req.user.department, now]
+    );
+
+    const newComplaint = {
+      id: complaintId,
+      title,
+      category,
+      description,
+      status: 'OPEN',
+      raised_by: req.user.username,
+      raised_by_roll: req.user.rollNumber,
+      department: req.user.department,
+      createdAt: now,
+      messages: []
+    };
+
+    res.status(201).json(newComplaint);
+  } catch (err) {
+    console.error('Create Complaint Error:', err);
+    res.status(500).json({ error: 'Failed to submit complaint.' });
+  }
 });
 
 // Respond to complaint and update status
-app.post('/api/complaints/:id/respond', authenticate, (req: any, res) => {
+app.post('/api/complaints/:id/respond', authenticate, async (req: any, res) => {
   const { id } = req.params;
-  const { message, status } = req.body; // status (optional): 'IN_REVIEW' | 'RESOLVED'
+  const { message, status } = req.body;
   
   if (!message || message.trim() === '') {
     return res.status(400).json({ error: 'Response message cannot be empty.' });
   }
 
-  const complaintIndex = db.complaints.findIndex(c => c.id === id);
-  if (complaintIndex === -1) {
-    return res.status(404).json({ error: 'Complaint not found.' });
-  }
-
-  const complaint = db.complaints[complaintIndex];
-  const user = req.user;
-
-  // Let's enforce access check.
-  // Only HOD of that department and Dean can respond (students are forbidden).
-  const isHod = user.role === 'HOD' && user.department === complaint.department;
-  const isDean = user.role === 'Dean';
-
-  if (!isHod && !isDean) {
-    return res.status(403).json({ error: 'Access denied. Only higher authorities (HOD or Dean) can respond to grievances.' });
-  }
-
-  // Create message
-  const newMessage: ComplaintMessage = {
-    id: 'msg-' + Math.random().toString(36).substring(2, 9),
-    senderName: user.username,
-    senderRole: user.role,
-    message: message.trim(),
-    timestamp: new Date().toISOString()
-  };
-
-  complaint.messages.push(newMessage);
-
-  // If status is provided, update it. (HOD/Dean can update)
-  if (status && ['OPEN', 'IN_REVIEW', 'RESOLVED'].includes(status)) {
-    if (isHod || isDean) {
-      complaint.status = status;
+  try {
+    const compRes = await pool.query('SELECT * FROM complaints WHERE id = $1', [id]);
+    if (compRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Complaint not found.' });
     }
-  } else if (complaint.status === 'OPEN') {
-    // If HOD or Dean responds, automatically move it to 'IN_REVIEW'
-    complaint.status = 'IN_REVIEW';
+
+    const complaint = compRes.rows[0];
+    const user = req.user;
+
+    const isHod = user.role === 'HOD' && user.department === complaint.department;
+    const isDean = user.role === 'Dean';
+
+    if (!isHod && !isDean) {
+      return res.status(403).json({ error: 'Access denied. Only higher authorities (HOD or Dean) can respond to grievances.' });
+    }
+
+    const msgId = 'msg-' + Math.random().toString(36).substring(2, 9);
+    const now = new Date().toISOString();
+
+    await pool.query(
+      `INSERT INTO complaint_messages (id, complaint_id, sender_name, sender_role, message, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [msgId, id, user.username, user.role, message.trim(), now]
+    );
+
+    let newStatus = complaint.status;
+    if (status && ['OPEN', 'IN_REVIEW', 'RESOLVED'].includes(status)) {
+      newStatus = status;
+    } else if (complaint.status === 'OPEN') {
+      newStatus = 'IN_REVIEW';
+    }
+
+    await pool.query('UPDATE complaints SET status = $1 WHERE id = $2', [newStatus, id]);
+
+    // Return updated complaint
+    const updatedCompRes = await pool.query(
+      `SELECT id, title, category, description, status, 
+              raised_by, raised_by_roll, department, created_at as "createdAt" 
+       FROM complaints WHERE id = $1`,
+      [id]
+    );
+    const updatedComp = updatedCompRes.rows[0];
+
+    const msgRes = await pool.query(
+      `SELECT id, sender_name as "senderName", sender_role as "senderRole", 
+              message, timestamp 
+       FROM complaint_messages 
+       WHERE complaint_id = $1 
+       ORDER BY timestamp ASC`,
+      [id]
+    );
+    updatedComp.messages = msgRes.rows;
+
+    res.json(updatedComp);
+  } catch (err) {
+    console.error('Complaint Response Error:', err);
+    res.status(500).json({ error: 'Database response failure.' });
   }
-
-  db.complaints[complaintIndex] = complaint;
-  saveDb();
-
-  res.json(complaint);
 });
 
 // Software Admin Privilege Management routes
-app.get('/api/admin/users', authenticate, (req: any, res) => {
+app.get('/api/admin/users', authenticate, async (req: any, res) => {
   if (req.user.role !== 'Software Admin') {
     return res.status(403).json({ error: 'Access denied. Software Admin privilege required.' });
   }
-  const users = db.users.map(u => ({
-    username: u.username,
-    role: u.role,
-    department: u.department,
-    rollNumber: u.rollNumber
-  }));
-  res.json(users);
+  try {
+    const usersRes = await pool.query(
+      'SELECT username, role, department, roll_number as "rollNumber" FROM users ORDER BY username ASC'
+    );
+    res.json(usersRes.rows);
+  } catch (err) {
+    console.error('Fetch Users Error:', err);
+    res.status(500).json({ error: 'Database query error.' });
+  }
 });
 
-app.put('/api/admin/users/:username', authenticate, (req: any, res) => {
+app.put('/api/admin/users/:username', authenticate, async (req: any, res) => {
   if (req.user.role !== 'Software Admin') {
     return res.status(403).json({ error: 'Access denied. Software Admin privilege required.' });
   }
   const { username } = req.params;
   const { role, department, rollNumber } = req.body;
 
-  const userIndex = db.users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-  if (userIndex === -1) {
-    return res.status(404).json({ error: 'User not found.' });
+  try {
+    const userRes = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const targetUser = userRes.rows[0];
+
+    if (targetUser.username.toLowerCase() === 'admin@clg' && role !== 'Software Admin') {
+      return res.status(400).json({ error: 'Cannot change the privileges of the main Software Admin.' });
+    }
+
+    if (!role) {
+      return res.status(400).json({ error: 'Role is a required field.' });
+    }
+
+    if (['Student', 'Dept Staff', 'HOD'].includes(role) && !department) {
+      return res.status(400).json({ error: 'Department selection is mandatory for this role.' });
+    }
+
+    if (role === 'Student' && !rollNumber) {
+      return res.status(400).json({ error: 'Roll number is mandatory for students.' });
+    }
+
+    const deptVal = ['Student', 'Dept Staff', 'HOD'].includes(role) ? department : null;
+    const rollVal = role === 'Student' ? rollNumber : null;
+
+    await pool.query(
+      'UPDATE users SET role = $1, department = $2, roll_number = $3 WHERE LOWER(username) = LOWER($4)',
+      [role, deptVal, rollVal, username]
+    );
+
+    res.json({
+      username: targetUser.username,
+      role,
+      department: deptVal || undefined,
+      rollNumber: rollVal || undefined
+    });
+  } catch (err) {
+    console.error('Update User Error:', err);
+    res.status(500).json({ error: 'Failed to update user privileges.' });
   }
-
-  const targetUser = db.users[userIndex];
-
-  // Prevent lockout/demoting Software Admin account
-  if (targetUser.username.toLowerCase() === 'admin@clg' && role !== 'Software Admin') {
-    return res.status(400).json({ error: 'Cannot change the privileges of the main Software Admin.' });
-  }
-
-  // Validate properties
-  if (!role) {
-    return res.status(400).json({ error: 'Role is a required field.' });
-  }
-
-  if (['Student', 'Dept Staff', 'HOD'].includes(role) && !department) {
-    return res.status(400).json({ error: 'Department selection is mandatory for this role.' });
-  }
-
-  if (role === 'Student' && !rollNumber) {
-    return res.status(400).json({ error: 'Roll number is mandatory for students.' });
-  }
-
-  targetUser.role = role;
-  targetUser.department = ['Student', 'Dept Staff', 'HOD'].includes(role) ? department : undefined;
-  targetUser.rollNumber = role === 'Student' ? rollNumber : undefined;
-
-  db.users[userIndex] = targetUser;
-  saveDb();
-
-  res.json({
-    username: targetUser.username,
-    role: targetUser.role,
-    department: targetUser.department,
-    rollNumber: targetUser.rollNumber
-  });
 });
 
-// Admin Route to Reset DB (useful for testers to restore clean states)
-app.post('/api/reset', (req, res) => {
-  initializeWithSeeds();
-  res.json({ message: 'Database successfully re-seeded to initial state.', users: db.users.map(u => ({ username: u.username, role: u.role, department: u.department })) });
+// Admin Route to Reset DB
+app.post('/api/reset', async (req, res) => {
+  try {
+    await pool.query('TRUNCATE users, events, event_activities, complaints, complaint_messages CASCADE');
+    await initPostgresDb();
+    const usersRes = await pool.query('SELECT username, role, department FROM users');
+    res.json({ message: 'Database successfully re-seeded to initial state.', users: usersRes.rows });
+  } catch (err) {
+    console.error('Reset DB Error:', err);
+    res.status(500).json({ error: 'Database reset error.' });
+  }
 });
-
 
 // Setup Vite or Static File serving based on node environment
 async function startServer() {
@@ -709,7 +615,7 @@ async function startServer() {
 
   app.listen(PORT, HOST, () => {
     const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-    console.log(`Server running on http://${displayHost}:${PORT}`);
+    console.log(`🚀 Server running on http://${displayHost}:${PORT}`);
   });
 }
 
