@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Role, Department, DEPARTMENTS } from '../types';
 import { register, login } from '../lib/api';
-import { LogIn, UserPlus, Info, CheckCircle2 } from 'lucide-react';
+import { LogIn, UserPlus, CheckCircle2 } from 'lucide-react';
 
 interface LoginRegisterProps {
   onLoginSuccess: (user: any, token: string) => void;
@@ -29,21 +29,6 @@ export function LoginRegister({ onLoginSuccess }: LoginRegisterProps) {
   const [regError, setRegError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-
-  // Quick Switch role test helper
-  const handleQuickDemoLogin = async (roleUsername: string) => {
-    setLoading(true);
-    setLoginError('');
-    try {
-      const data = await login(roleUsername, 'password');
-      localStorage.setItem('college_portal_token', data.token);
-      onLoginSuccess(data.user, data.token);
-    } catch (err: any) {
-      setLoginError(err.message || 'Quick login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -336,64 +321,6 @@ export function LoginRegister({ onLoginSuccess }: LoginRegisterProps) {
                 </form>
               )}
             </div>
-          </div>
-
-          {/* Guide Card to Sandbox logins */}
-          <div className="bg-white/[0.02] border border-white/10 rounded-xl p-6 mt-4 space-y-3">
-            <h3 className="text-xs font-bold text-white/80 flex items-center gap-1.5 font-mono uppercase tracking-wider">
-              <Info size={14} className="text-[#5D5FEF] shrink-0" />
-              Quick Test Sandbox Users
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] text-white/70 font-mono">
-              <div className="bg-white/[0.01] p-2 rounded border border-white/5 flex justify-between items-center">
-                <span>Student (CS)</span>
-                <button
-                  onClick={() => handleQuickDemoLogin('student')}
-                  className="text-xs text-[#5D5FEF] hover:underline font-bold cursor-pointer"
-                >
-                  Log in
-                </button>
-              </div>
-              <div className="bg-white/[0.01] p-2 rounded border border-white/5 flex justify-between items-center">
-                <span>Dept Staff (CS)</span>
-                <button
-                  onClick={() => handleQuickDemoLogin('staff')}
-                  className="text-xs text-[#5D5FEF] hover:underline font-bold cursor-pointer"
-                >
-                  Log in
-                </button>
-              </div>
-              <div className="bg-white/[0.01] p-2 rounded border border-white/5 flex justify-between items-center">
-                <span>HOD (CS)</span>
-                <button
-                  onClick={() => handleQuickDemoLogin('hod')}
-                  className="text-xs text-[#5D5FEF] hover:underline font-bold cursor-pointer"
-                >
-                  Log in
-                </button>
-              </div>
-              <div className="bg-white/[0.01] p-2 rounded border border-white/5 flex justify-between items-center">
-                <span>Dean</span>
-                <button
-                  onClick={() => handleQuickDemoLogin('dean')}
-                  className="text-xs text-[#5D5FEF] hover:underline font-bold cursor-pointer"
-                >
-                  Log in
-                </button>
-              </div>
-              <div className="col-span-1 sm:col-span-2 bg-white/[0.01] p-2 rounded border border-white/5 flex justify-between items-center">
-                <span>Principal (Institution Head)</span>
-                <button
-                  onClick={() => handleQuickDemoLogin('principal')}
-                  className="text-xs text-[#5D5FEF] hover:underline font-bold cursor-pointer"
-                >
-                  Log in
-                </button>
-              </div>
-            </div>
-            <p className="text-[9px] text-[#5D5FEF]/80 font-mono tracking-wider italic text-center">
-              * Standard credentials: "password" for all accounts.
-            </p>
           </div>
         </div>
       </div>
