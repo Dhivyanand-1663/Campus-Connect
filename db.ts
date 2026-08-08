@@ -12,13 +12,22 @@ dotenv.config();
 const { Pool } = pg;
 
 // PostgreSQL Connection Pool
-export const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME || 'Campus-Connect',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '1663',
-});
+const isLocal = !process.env.DATABASE_URL || process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
+
+export const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: isLocal ? false : { rejectUnauthorized: false },
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: Number(process.env.DB_PORT) || 5432,
+        database: process.env.DB_NAME || 'campus-connect',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || '1663',
+      }
+);
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -29,7 +38,7 @@ export async function initPostgresDb() {
   let client;
   try {
     client = await pool.connect();
-    console.log('🔄 Connecting & checking PostgreSQL tables in database "Campus-Connect"...');
+    console.log('🔄 Connecting & checking PostgreSQL tables in database "campus-connect"...');
 
     // 1. Create Users Table
     await client.query(`
