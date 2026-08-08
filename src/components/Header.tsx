@@ -47,16 +47,6 @@ export function Header({ user, onLogout, onLogoClick, onOpenUpdateModal }: Heade
           {/* Right Session Details */}
           {user && (
             <div className="flex items-center gap-4">
-              {onOpenUpdateModal && (
-                <button
-                  onClick={onOpenUpdateModal}
-                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-md text-xs font-mono transition-all cursor-pointer"
-                  title="Watch Git Push Deployment Animation"
-                >
-                  <RefreshCw size={12} className="animate-spin-slow" />
-                  <span>Git Update Screen</span>
-                </button>
-              )}
               <div className="hidden md:flex flex-col items-end text-right">
                 <span className="text-sm font-bold text-[#E4E4E4]">{user.username}</span>
                 {user.department ? (
