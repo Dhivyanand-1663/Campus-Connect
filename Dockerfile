@@ -24,11 +24,7 @@ ENV HOST=0.0.0.0
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Copy build artifacts from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/db.json ./db.json
-
-EXPOSE 3000
 
 # Start server
 CMD ["npm", "start"]
